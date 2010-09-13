@@ -37,17 +37,18 @@ sub create {
 	# Clean up
   `rm -f $cfg->{EE}{tmpDir}/*.rss`;
 
-	# Open file handles to avoid iterating X times through @words
-  my %files = ();
-  for my $number (@rssmessages){
-  open($files{$number}, '>::utf8', "$cfg->{EE}{tmpDir}/NaviUpdates_${number}.rss") or $m->error("Could not open file! ($! for $cfg->{EE}{tmpDir}/NaviUpdates_${number}.rss)");
-  $files{$number} or $m->error("could not open file");
-
 	require POSIX;
 	my $oldLocale = POSIX::setlocale(POSIX::LC_TIME(), 'C');
-	my $buildDate = $m->formatTime($m->{now}, 0, "%a, %d %b %Y %H:%M:%S GMT");
-	my $pubDate = $m->formatTime($sorted[0]->{editTime}, "%a, %d %b %Y %H:%M:%S GMT");
-  print {$files{$number}} <<EORSS;
+		
+	# Open file handles to avoid iterating X times through @words
+  my %files = ();
+  for my $number (@rssmessages) {
+		open($files{$number}, '>::utf8', "$cfg->{EE}{tmpDir}/NaviUpdates_${number}.rss") or $m->error("Could not open file! ($! for $cfg->{EE}{tmpDir}/NaviUpdates_${number}.rss)");
+		$files{$number} or $m->error("could not open file");
+
+		my $buildDate = $m->formatTime($m->{now}, 0, "%a, %d %b %Y %H:%M:%S GMT");
+		my $pubDate = $m->formatTime($sorted[0]->{editTime}, 0, "%a, %d %b %Y %H:%M:%S GMT");
+		print {$files{$number}} <<EORSS;
 <?xml version='1.0' encoding='utf-8'?>
 <rss version='2.0'>\n",
   <channel>
@@ -61,8 +62,8 @@ sub create {
     <generator>RSS generator for Eana Eltu 1.0</generator>
     <copyright>Eana Eltu RSS data by Tobias Jaeggi (Tuiq, tuiq\@clonk2c.ch), Richard Littauer (Taronyu, richard\@learnnavi.org) and others is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License ( http://creativecommons.org/licenses/by-nc-sa/3.0/ ). The full license text is available at http://creativecommons.org/licenses/by-nc-sa/3.0/legalcode .</copyright>
 EORSS
-  }
-
+	}
+	
 	# Iterate through @words
   my $done = 0;
   for my $word (@sorted) {
