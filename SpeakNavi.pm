@@ -482,6 +482,7 @@ sub refreshMySQLDatabase {
 			$type = $r->{arg3};
 		}
 		#~ \note{s\`i=}{sI}{conj.}{and}{connects two things: for clauses use, can be attached as --s\`i}{ulte}{and}{S} 
+		die Dumper($r) if (!defined $r->{arg1});
 		$word{nav} = texToPerl($r->{arg1});
 		#~ $word{nav} =~ s/^[*-=+]+//o; # This may be a bit unhealthy
 		#~ $word{nav} =~ s/[*-=+]+$//o; # UNHEALTHY
@@ -489,12 +490,13 @@ sub refreshMySQLDatabase {
 		$word{ipa} = tipaToPerl($r->{arg2});
                 $word{editTime} = $r->{editTime};
 		$word{type} = $type;
+		die Dumper($r) if !defined $r->{$lcField};
 		$word{eng} = texToPerl($r->{$lcField});
 		$word{eng} .= ' (' . texToPerl($r->{'arg5'}) . ')' if $r->{type} eq 'note';
 		#~ $word{eng} =~ s/\\[A-Za-z]+//go;
 		#~ $word{eng} =~ s/[{}]//go;
-		$word{reng} = SpeakNavi::denavizes($word{eng});
 		$word{typeeng} = $word{type};
+		die %word if !defined $word{eng};
 		$word{eeng} = prepareEL($word{eng});
 		$word{svnav} = undef;
 		$word{snav} = undef;
@@ -506,10 +508,12 @@ sub refreshMySQLDatabase {
 		# Go get these wussies.
 		while ($s = $ssth->fetchrow_hashref()) {
 			my $lc = $s->{lc};
-			print "ALERT!", ::Dumper($r, $s) if !defined $s->{$lcField};
+			if (!defined $s->{$lcField}) {
+				print "ALERT!", ::Dumper($r, $s);
+				$s->{$lcField} = $word{eng};
+			}
 			$word{$lc} = texToPerl($s->{$lcField});
 			$word{$lc} .= ' (' . $r->{'arg5'} . ')' if $r->{type} eq 'note';
-			$word{"r$lc"} = SpeakNavi::denavizes($word{$lc});
 			$word{"type$lc"} = $r->{type} eq 'derivingaffix' ? '' : $s->{arg3};
 			$word{"e$lc"} = prepareEL($word{$lc});
 		}
@@ -646,28 +650,6 @@ sub prepareEL {
 	$text =~ s/[ ,]/./g;
 	$text =~ s/\.\././g;
 	return $text;
-}
-
-sub denavizes {
-	my @_2 = @_;
-	return denavize(\$_2[0], @_2[1..$#_]);
-}
-# Replaces common "errors" to unify everything.
-sub denavize {
-	my ($text, $full) = @_;
-	$full = 1 if !defined $full;
-	$$text = lc $$text;
-	$$text =~ s/$WRONGIS/i/igo;
-	$$text =~ s/$WRONGAS/a/igo;	
-	if ($full) {
-		$$text =~ s/\W//igo;
-	} else {
-		$$text =~ s/[^A-Za-z-.()]//igo;
-	}
-	$$text =~ s/[,.'"´`¨!?_]//igo;
-	$$text =~ s/[()-]//go if $full;
-	$$text = quotemeta($$text);
-	return $$text;
 }
 
 {
@@ -850,7 +832,7 @@ sub advTranslateSentence {
 		#   SCALAR FOUND WORD
 		# ]
 		my @found = ();
-		my $rword = denavizes($word);
+		#~ my $rword = denavizes($word);
 		# Check for default pairs.
 		for my $pair (@{$db->{words}}) {
 			# Normal
@@ -979,7 +961,7 @@ sub advTranslateSentence {
 			# Oh god. Check if it's a number.
 			my $num = naviToNum($word);
 			# G...rah?
-			my $fakeword = {'nav' => $word, 'rnav' => $rword, 'eng' => $num, 'eeng' => $num, 'typeeng' => 'num.', 'type' => 'num.'};
+			my $fakeword = {'nav' => $word, 'eng' => $num, 'eeng' => $num, 'typeeng' => 'num.', 'type' => 'num.'};
 			for my $lc (grep { $LANGUAGES{$_}{active} } keys %LANGUAGES) {
 				$fakeword->{$lc} = $num;
 				$fakeword->{"e$lc"} = $num;
@@ -989,7 +971,7 @@ sub advTranslateSentence {
 		}
 			
 		if (!scalar @found) {
-			push @result, [$word, {'nav' => $word, 'rnav' => $rword, 'eng' => undef}, []];
+			push @result, [$word, {'nav' => $word, 'eng' => undef}, []];
 		} else {
 			# sort.
 			@found = sort { $a->[0] <=> $b->[0] } @found;

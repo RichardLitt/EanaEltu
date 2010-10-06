@@ -76,6 +76,17 @@ sub askLanguages {
 	return $result->{data};
 }
 
+sub askCheat {
+	my ($yn, $input) = @_;
+	my $result = $yn->send(request => 'cheat', data => $input);
+	if (!$result || $result->{status} ne 'Success') {
+		$yn->{lastError} = $result->{message} if exists $result->{message};
+		return undef;
+	}
+	print "CHEATEN IS EVIL. Always keep that in mind, son.\n";
+	return $result->{data};
+}
+
 sub askRefresh {
 	my ($yn) = @_;
 	my $result = $yn->send(request => 'refresh');

@@ -143,7 +143,7 @@ while ((my @readready = $select->can_read(scalar keys %connections ? 30 : undef)
 				utf8::decode($msg);
 				my $data = from_json($msg);
 				my $req;
-				if (!exists $data->{request} || $data->{request} !~ /^(translate|lookup|num|peristent|lcs|refresh|getemall)$/) {
+				if (!exists $data->{request} || $data->{request} !~ /^(translate|lookup|num|peristent|lcs|refresh|getemall|cheat)$/) {
 					logSth("Invalid request field");
 					sendAnswer($fh, status => 'Failure', message => "Invalid request field ($data->{request})");
 					return 1;
@@ -254,6 +254,26 @@ while ((my @readready = $select->can_read(scalar keys %connections ? 30 : undef)
 					logSth("Numerics");
 					sendAnswer($fh, status => 'Success', data => SpeakNavi::numToNavi($data->{data}));
 					return 1;
+				}
+				# Cheat.
+				elsif ($req eq 'cheat') {
+					logSth("Cheat.");
+					utf8::decode($data->{data});
+					my $REGEX;
+					{
+						my %uniq;
+						my $STR = $data->{data};
+						$STR =~ s/[^A-Za-zäÄÌì']//g;
+						$REGEX = '[' . join('', sort { $a cmp $b } grep { !$uniq{$_}++ } split(//, $STR)) . ']{' . (length $STR) . ',' . (length $STR) . '}';
+					}
+					my @founds;
+					for my $word (@{$ydb->{words}}) {
+						if ($word->{nav} =~ /^$REGEX$/i) {
+							push @founds, $word->{nav};
+						}
+					}
+					sendAnswer($fh, status => 'Success', data => \@founds);
+					return;
 				}
 				# Lcs
 				elsif ($req eq 'lcs') {
