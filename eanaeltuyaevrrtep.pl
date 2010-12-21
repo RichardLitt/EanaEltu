@@ -19,7 +19,7 @@ my $SERVER_FILE = $EEConfig::cfg->{serverfile};
 # Loading keys. They are usually MD5 hashes of a silly sentence, but can be anything.
 my @KEYS;
 {
-	open(my $FH, '.keys');
+	open(my $FH, '.eekeys');
 	@KEYS = <$FH>;
 	close $FH;
 };
@@ -45,7 +45,7 @@ sub warnSth {
 # Starting.
 
 logSth("Starting server...");
-
+logSth("Loaded " . (scalar @KEYS) . " keys.");
 #~ my $sock = IO::Socket::INET->new(
 		#~ LocalPort => $SERVER_PORT,
 		#~ Proto => 'udp')
@@ -139,7 +139,7 @@ while ((my @readready = $select->can_read(scalar keys %connections ? 30 : undef)
 			my $close = 1;
 			# $client is new connection
 			eval {
-				die 'Empty message: ' . Dumper($msg) if (!$msg);
+				die 'Empty message: ' . Dumper($msg) if (!$msg || $msg eq '');
 				utf8::decode($msg);
 				my $data = from_json($msg);
 				my $req;
@@ -327,11 +327,14 @@ while ((my @readready = $select->can_read(scalar keys %connections ? 30 : undef)
 			if ($@) {
 				warnSth("Error parsing data: $@");
 				if ($fh && $fh->connected) {
+					logSth("Telling $fh to GTFO.");
 					sendAnswer($fh, status => 'Failure', message => 'Malformed query or internal error');
 					delete $connections{$fh};
-					$select->remove($fh);
-					$fh = undef;
 				}
+				$select->remove($fh);
+				$fh = undef;
+				logSth("He mad.");
+				next;				
 				#~ $fh->send(to_json({status => 'Failure', message => 'Malformed query'}));
 			}
 			

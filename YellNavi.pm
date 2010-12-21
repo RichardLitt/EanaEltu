@@ -63,7 +63,12 @@ sub askPeristentMode {
 	my ($yn) = @_;
 	return if $yn->{peristent};
 	$yn->{peristent} = 1;
-	return ($yn->send(request => 'peristent'))->{status} eq 'Success';
+	my $result = $yn->send(request => 'peristent');
+	if (!$result || $result->{status} ne 'Success') {
+		$yn->{lastError} = $result->{message} if exists $result->{message};
+		return undef;
+	}
+	return 1;
 }
 
 sub askLanguages {
@@ -119,6 +124,7 @@ sub send {
 	my $json = JSON::to_json(\%paras);
 	utf8::encode($json);
 	$yn->{sock}->send($json);
+	#~ warn "Sending something\n";
 	return $yn->recv;
 }
 
@@ -130,9 +136,10 @@ sub recv {
 	eval {
 		# Länge
 		my $l;
-		$yn->{sock}->recv($l, 4) or die 'Connection closed';
+		defined $yn->{sock}->recv($l, 4) or die 'Connection closed';
 		die 'No length received' if (!$l);
 		$l = unpack("L", $l);
+		#~ warn "Receiving $l bytes.\n";
 		my $r = 0;
 		my $buf;
 		while ($l > $r) {

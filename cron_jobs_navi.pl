@@ -51,15 +51,18 @@ if (!$data || $@ || $!) {
 }
 
 # Open FTP.
-my $ftp = Net::FTP->new($cfg->{EE}{ftp}{server}, Timeout => 120, Passive => 1) or $m->error("could not connect to ftp");
-$ftp->login($cfg->{EE}{ftp}{user}, $cfg->{EE}{ftp}{password}) or $m->error("could not ftp login");
-$ftp->binary() or $m->error("could not binary");
-$ftp->cwd($cfg->{EE}{ftp}{dir}) or $m->error("could not cwd");
+my $ftp = undef;
+if (defined $cfg->{EE}{ftp}) {
+	$ftp = Net::FTP->new($cfg->{EE}{ftp}{server}, Timeout => 120, Passive => 1) or $m->error("could not connect to ftp");
+	$ftp->login($cfg->{EE}{ftp}{user}, $cfg->{EE}{ftp}{password}) or $m->error("could not ftp login");
+	$ftp->binary() or $m->error("could not binary");
+	$ftp->cwd($cfg->{EE}{ftp}{dir}) or $m->error("could not cwd");
+}
 
 for (@{$cfg->{EE}{addons}}) {
-	print "Calling $_...\n";
+	#~ print "Calling $_...\n";
 	$m->callPlugin("${_}::create", words => $data, ftp => $ftp, languages => \@languages, advLanguages => $languages) ;
-	print "Called.\n";
+	#~ print "Called.\n";
 }
 
 $m->logAction(1, 'navicj', 'exec');
