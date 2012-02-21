@@ -262,6 +262,7 @@ sub openMySQLDatabase {
 	my ($self, $database, $username, $password) = @_;
 	my $ref = {'words' => [], 'type' => 'mysql', 'dbh' => undef};
 	$ref->{dbh} = DBI->connect("DBI:mysql:$database", $username, $password) or die "Error connecting to database: " . DBI->errstr . "\n";
+	$ref->{dbh}->{mysql_enable_utf8} = 1; $ref->{dbh}->do("set names 'utf8';");
 	refreshMySQLDatabase($ref);
 	return $ref;
 }
@@ -595,7 +596,7 @@ sub refreshMySQLDatabase {
 		}		
 	}
 	@ATTENTIONWORDS = array_unique(@ATTENTIONWORDS);
-	print "Words to pay attention: ", join(' ', @ATTENTIONWORDS), "\n";
+	#~ print "Words to pay attention: ", join(' ', @ATTENTIONWORDS), "\n";
 	$ref->{words} = \@words;
 	
 	bless $ref;
